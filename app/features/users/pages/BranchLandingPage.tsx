@@ -601,99 +601,65 @@ export default function BranchLandingPage({ slug }: BranchLandingPageProps) {
         </Container>
       </Box>
 
-      {/* FOOTER */}
-      <Box sx={{ bgcolor: "#1a1a1a", py: { xs: 6, md: 8 } }}>
-        <Container maxWidth="lg">
-          <Box sx={{ 
-            display: "grid", 
-            gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", md: "1.5fr 1fr 1fr 1fr" }, 
-            gap: { xs: 4, md: 6 }, 
-            pb: 6, 
-            borderBottom: "1px solid #333" 
+      {/* FOOTER - HTML puro sin iconos */}
+      <footer 
+        style={{ 
+          backgroundColor: "#111", 
+          color: "white",
+          padding: "48px 24px",
+        }}
+      >
+        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+          {/* Nombre y tagline */}
+          <div style={{ textAlign: "center", marginBottom: 32 }}>
+            <h3 style={{ 
+              fontSize: 28, 
+              fontWeight: 800, 
+              margin: 0,
+              marginBottom: 8,
+            }}>
+              {branch.name}
+            </h3>
+            <p style={{ color: "#888", margin: 0, fontSize: 15 }}>
+              Tu sucursal de confianza
+            </p>
+          </div>
+
+          {/* Links */}
+          <nav style={{ 
+            textAlign: "center", 
+            marginBottom: 32,
           }}>
-            {/* Nombre y descripción */}
-            <Box>
-              <Typography sx={{ color: "white", fontWeight: 800, fontSize: { xs: "1.25rem", md: "1.5rem" }, mb: 1 }}>
-                {branch.name}
-              </Typography>
-              <Typography sx={{ color: "rgba(255,255,255,0.6)", fontSize: "0.9rem", lineHeight: 1.6 }}>
-                Tu sucursal de confianza con atención personalizada y los mejores servicios.
-              </Typography>
-            </Box>
+            <a href="#inicio" style={{ color: "#aaa", margin: "0 16px", textDecoration: "none", fontSize: 14 }}>Inicio</a>
+            <a href="#contacto" style={{ color: "#aaa", margin: "0 16px", textDecoration: "none", fontSize: 14 }}>Contacto</a>
+            <a href="#horarios" style={{ color: "#aaa", margin: "0 16px", textDecoration: "none", fontSize: 14 }}>Horarios</a>
+            <a href="#galeria" style={{ color: "#aaa", margin: "0 16px", textDecoration: "none", fontSize: 14 }}>Galería</a>
+            <a href="#ubicacion" style={{ color: "#aaa", margin: "0 16px", textDecoration: "none", fontSize: 14 }}>Ubicación</a>
+          </nav>
 
-            {/* Navegación */}
-            <Box>
-              <Typography sx={{ color: "white", fontWeight: 700, fontSize: "0.9rem", mb: 2, letterSpacing: 1, textTransform: "uppercase" }}>
-                Navegación
-              </Typography>
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
-                {["Inicio", "Contacto", "Horarios", "Galería", "Ubicación"].map((item) => (
-                  <Typography
-                    key={item}
-                    component="a"
-                    href={`#${item.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")}`}
-                    sx={{ 
-                      color: "rgba(255,255,255,0.7)", 
-                      fontSize: "0.9rem", 
-                      textDecoration: "none", 
-                      transition: "all 0.2s",
-                      "&:hover": { color: "white" },
-                      display: "inline-block",
-                    }}
-                  >
-                    {item}
-                  </Typography>
-                ))}
-              </Box>
-            </Box>
-
-            {/* Contacto */}
+          {/* Contacto */}
+          <div style={{ 
+            textAlign: "center", 
+            marginBottom: 32,
+            paddingBottom: 32,
+            borderBottom: "1px solid #333",
+          }}>
             {branch.primaryPhone && (
-              <Box>
-                <Typography sx={{ color: "white", fontWeight: 700, fontSize: "0.9rem", mb: 2, letterSpacing: 1, textTransform: "uppercase" }}>
-                  Contacto
-                </Typography>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                  <HiOutlinePhone size={18} color="rgba(255,255,255,0.7)" />
-                  <Typography 
-                    component="a" 
-                    href={`tel:${branch.primaryPhone}`} 
-                    sx={{ 
-                      color: "rgba(255,255,255,0.7)", 
-                      fontSize: "0.9rem", 
-                      textDecoration: "none", 
-                      transition: "color 0.2s",
-                      "&:hover": { color: "white" } 
-                    }}
-                  >
-                    {branch.primaryPhone}
-                  </Typography>
-                </Box>
-              </Box>
+              <span style={{ color: "#aaa", marginRight: 24, fontSize: 14 }}>
+                Tel: {branch.primaryPhone}
+              </span>
             )}
-
-            {/* Dirección */}
-            <Box>
-              <Typography sx={{ color: "white", fontWeight: 700, fontSize: "0.9rem", mb: 2, letterSpacing: 1, textTransform: "uppercase" }}>
-                Dirección
-              </Typography>
-              <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1.5 }}>
-                <HiOutlineLocationMarker size={18} color="rgba(255,255,255,0.7)" style={{ marginTop: 2, flexShrink: 0 }} />
-                <Typography sx={{ color: "rgba(255,255,255,0.7)", fontSize: "0.9rem", lineHeight: 1.5 }}>
-                  {branch.address}
-                </Typography>
-              </Box>
-            </Box>
-          </Box>
+            <span style={{ color: "#aaa", fontSize: 14 }}>
+              Dir: {branch.address}
+            </span>
+          </div>
 
           {/* Copyright */}
-          <Box sx={{ pt: 4, display: "flex", flexDirection: { xs: "column", sm: "row" }, justifyContent: "space-between", alignItems: "center", gap: 2 }}>
-            <Typography sx={{ color: "rgba(255,255,255,0.5)", fontSize: "0.8rem", textAlign: { xs: "center", sm: "left" } }}>
-              © {new Date().getFullYear()} {branch.name}. Todos los derechos reservados.
-            </Typography>
-          </Box>
-        </Container>
-      </Box>
+          <p style={{ textAlign: "center", color: "#666", fontSize: 12, margin: 0 }}>
+            © {new Date().getFullYear()} {branch.name}. Todos los derechos reservados.
+          </p>
+        </div>
+      </footer>
 
       {/* Chat Widget */}
       <ChatWidget branchSlug={slug} branchName={branch.name} />
