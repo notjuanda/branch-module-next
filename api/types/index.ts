@@ -103,3 +103,21 @@ export type {
     MovementType,
     MovementReportResponse,
 } from "./report.types";
+
+// Chatbot
+export {
+    ChatbotModel,
+    MessageRole,
+} from "./chatbot.types";
+export type {
+    MessageId,
+    SessionId,
+    ChatMessage,
+    ChatSession,
+    SendMessageRequest,
+    ChangeModelRequest,
+    ChatMessageResponse,
+    ChatbotLoginRequest,
+    ChatbotRegisterRequest,
+    ChatbotAuthResponse,
+} from "./chatbot.types";

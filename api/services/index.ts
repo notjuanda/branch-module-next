@@ -11,3 +11,5 @@ export { inventoryService } from "./inventory.service";
 export { batchService } from "./batch.service";
 export { branchStockService } from "./branchStock.service";
 export { reportService } from "./report.service";
+export { chatbotService } from "./chatbot.service";
+export { chatbotAuthService } from "./chatbotAuth.service";

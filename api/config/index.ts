@@ -2,6 +2,7 @@
 
 export { API_CONFIG } from "./api.config";
 export { apiClient, tokenStorage } from "./api.client";
+export { chatbotApiClient, chatbotTokenStorage, CHATBOT_ENDPOINTS } from "./chatbot.client";
 export {
     ApiException,
     UnauthorizedException,

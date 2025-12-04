@@ -6,20 +6,10 @@ import { motion, Variants } from "framer-motion";
 import { HiOutlineLocationMarker, HiOutlinePhone, HiOutlineClock } from "react-icons/hi";
 import { FaWhatsapp, FaParking, FaWheelchair } from "react-icons/fa";
 import { MdDirections } from "react-icons/md";
-import {
-  BranchResponse,
-  BranchImageResponse,
-  BranchPhoneResponse,
-  ScheduleResponse,
-} from "@/api/types";
-import {
-  branchService,
-  branchImageService,
-  branchPhoneService,
-  scheduleService,
-} from "@/api/services";
+import { BranchResponse, BranchImageResponse, BranchPhoneResponse, ScheduleResponse } from "@/api/types";
+import { branchService, branchImageService, branchPhoneService, scheduleService } from "@/api/services";
 import { API_CONFIG } from "@/api/config";
-import { LandingNavbar } from "../components";
+import { LandingNavbar, ChatWidget } from "../components";
 
 // Motion components
 const MotionBox = motion.create(Box);
@@ -704,6 +694,9 @@ export default function BranchLandingPage({ slug }: BranchLandingPageProps) {
           </Box>
         </Container>
       </Box>
+
+      {/* Chat Widget */}
+      <ChatWidget branchSlug={slug} branchName={branch.name} />
     </Box>
   );
 }

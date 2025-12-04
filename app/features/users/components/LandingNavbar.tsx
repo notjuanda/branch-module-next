@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Box, IconButton, Drawer, Typography, Container } from "@mui/material";
-import { HiOutlineMenuAlt4, HiX } from "react-icons/hi";
+import { Box, IconButton, Drawer, Typography, Container, Tooltip } from "@mui/material";
+import { HiOutlineMenuAlt4, HiX, HiOutlineLogout } from "react-icons/hi";
+import { useChatbotAuth } from "../context";
 
 interface LandingNavbarProps {
   branchName: string;
@@ -17,8 +18,15 @@ const NAV_ITEMS = [
 ];
 
 export default function LandingNavbar({ branchName }: LandingNavbarProps) {
+  const { user, logout } = useChatbotAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+
+  const handleLogout = () => {
+    logout();
+    // Recargar la página para volver al login
+    window.location.reload();
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -118,6 +126,29 @@ export default function LandingNavbar({ branchName }: LandingNavbarProps) {
                   {item.label}
                 </Box>
               ))}
+
+              {/* Separador y botón de cerrar sesión */}
+              {user && (
+                <>
+                  <Box sx={{ width: 1, height: 24, bgcolor: "rgba(255,255,255,0.3)", mx: 1 }} />
+                  <Tooltip title={`Cerrar sesión (${user.name})`}>
+                    <IconButton
+                      onClick={handleLogout}
+                      sx={{
+                        color: "white",
+                        opacity: 0.8,
+                        transition: "all 0.2s",
+                        "&:hover": {
+                          opacity: 1,
+                          bgcolor: "rgba(255,255,255,0.1)",
+                        },
+                      }}
+                    >
+                      <HiOutlineLogout size={20} />
+                    </IconButton>
+                  </Tooltip>
+                </>
+              )}
             </Box>
 
             {/* Menu Button - Mobile */}
@@ -196,6 +227,44 @@ export default function LandingNavbar({ branchName }: LandingNavbarProps) {
                   </Typography>
                 </Box>
               ))}
+
+              {/* Cerrar sesión en móvil */}
+              {user && (
+                <Box
+                  component="button"
+                  onClick={handleLogout}
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 1.5,
+                    py: 2,
+                    mt: 2,
+                    mx: "auto",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    transition: "all 0.2s ease",
+                    "&:hover": {
+                      "& .logout-label": { color: "#ef4444" },
+                      "& .logout-icon": { color: "#ef4444" },
+                    },
+                  }}
+                >
+                  <HiOutlineLogout className="logout-icon" size={28} color="rgba(255,255,255,0.5)" />
+                  <Typography
+                    className="logout-label"
+                    sx={{
+                      color: "rgba(255,255,255,0.5)",
+                      fontSize: { xs: "1.5rem", sm: "2rem" },
+                      fontWeight: 700,
+                      transition: "color 0.2s ease",
+                    }}
+                  >
+                    Cerrar sesión
+                  </Typography>
+                </Box>
+              )}
             </Box>
           </Box>
 

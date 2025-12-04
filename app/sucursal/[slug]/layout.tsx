@@ -1,15 +1,15 @@
-import type { Metadata } from "next";
+"use client";
 
-export const metadata: Metadata = {
-  title: "Sucursal",
-  description: "Información de la sucursal",
-};
+import { ChatbotAuthProvider } from "@/app/features/users";
 
 export default function BranchLandingLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // No necesita AuthProvider - es ruta pública
-  return <>{children}</>;
+  return (
+    <ChatbotAuthProvider>
+      {children}
+    </ChatbotAuthProvider>
+  );
 }
