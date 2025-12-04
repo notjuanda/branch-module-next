@@ -152,7 +152,13 @@ async function request<T>(
             return undefined as T;
         }
 
-        return response.json();
+        // Verificar si hay contenido antes de parsear JSON
+        const text = await response.text();
+        if (!text || text.trim() === "") {
+            return undefined as T;
+        }
+
+        return JSON.parse(text);
     } catch (error) {
         clearTimeout(timeoutId);
 
