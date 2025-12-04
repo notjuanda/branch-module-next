@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
     Box,
     Typography,
@@ -22,28 +22,31 @@ import { DataTable, Column, TableBadge, useToast } from "@/components/ui";
 
 const MOVEMENT_TYPES: { value: MovementType | "ALL"; label: string }[] = [
     { value: "ALL", label: "Todos" },
-    { value: "IN", label: "Entrada" },
-    { value: "OUT", label: "Salida" },
+    { value: "ENTRY", label: "Entrada" },
+    { value: "EXIT", label: "Salida" },
     { value: "TRANSFER", label: "Transferencia" },
     { value: "ADJUSTMENT", label: "Ajuste" },
+    { value: "EXPIRED_WRITE_OFF", label: "Baja por vencimiento" },
 ];
 
 const getMovementTypeVariant = (type: MovementType): "success" | "danger" | "info" | "warning" => {
     switch (type) {
-        case "IN": return "success";
-        case "OUT": return "danger";
+        case "ENTRY": return "success";
+        case "EXIT": return "danger";
         case "TRANSFER": return "info";
         case "ADJUSTMENT": return "warning";
+        case "EXPIRED_WRITE_OFF": return "danger";
         default: return "info";
     }
 };
 
 const getMovementTypeLabel = (type: MovementType): string => {
     switch (type) {
-        case "IN": return "Entrada";
-        case "OUT": return "Salida";
+        case "ENTRY": return "Entrada";
+        case "EXIT": return "Salida";
         case "TRANSFER": return "Transferencia";
         case "ADJUSTMENT": return "Ajuste";
+        case "EXPIRED_WRITE_OFF": return "Baja vencimiento";
         default: return type;
     }
 };
@@ -74,6 +77,21 @@ export default function MovementsReport() {
 
     const [fromDate, setFromDate] = useState(lastMonth.toISOString().split("T")[0]);
     const [toDate, setToDate] = useState(today.toISOString().split("T")[0]);
+
+    // Mapa de branchId -> branchName para resolver los nombres
+    const branchNameMap = useMemo(() => {
+        const map: Record<string, string> = {};
+        branches.forEach(b => {
+            map[b.id] = b.name;
+        });
+        return map;
+    }, [branches]);
+
+    // Función helper para obtener nombre de sucursal
+    const getBranchName = (branchId: string | null): string => {
+        if (!branchId) return "-";
+        return branchNameMap[branchId] || branchId;
+    };
 
     const loadBranches = useCallback(async () => {
         try {
@@ -165,18 +183,32 @@ export default function MovementsReport() {
         {
             id: "branches",
             header: "Origen / Destino",
-            accessor: (row) => row.sourceBranchName || "-",
-            render: (_, row) => (
-                <div className="flex items-center gap-1">
-                    <span className="text-sm">{row.sourceBranchName || "-"}</span>
-                    {row.movementType === "TRANSFER" && (
-                        <>
+            accessor: (row) => getBranchName(row.sourceBranchId),
+            render: (_, row) => {
+                const sourceName = getBranchName(row.sourceBranchId);
+                const destName = getBranchName(row.destinationBranchId);
+                
+                // Para ENTRY solo mostramos destino
+                if (row.movementType === "ENTRY") {
+                    return <span className="text-sm">→ {destName}</span>;
+                }
+                // Para EXIT solo mostramos origen
+                if (row.movementType === "EXIT" || row.movementType === "EXPIRED_WRITE_OFF") {
+                    return <span className="text-sm">{sourceName} →</span>;
+                }
+                // Para TRANSFER mostramos origen -> destino
+                if (row.movementType === "TRANSFER") {
+                    return (
+                        <div className="flex items-center gap-1">
+                            <span className="text-sm">{sourceName}</span>
                             <HiOutlineArrowRight size={14} className="text-text-muted" />
-                            <span className="text-sm">{row.destinationBranchName || "-"}</span>
-                        </>
-                    )}
-                </div>
-            ),
+                            <span className="text-sm">{destName}</span>
+                        </div>
+                    );
+                }
+                // Para ADJUSTMENT
+                return <span className="text-sm">{sourceName || destName}</span>;
+            },
         },
         {
             id: "quantity",
@@ -186,10 +218,10 @@ export default function MovementsReport() {
             sortable: true,
             render: (value, row) => {
                 const qty = value as number;
-                const prefix = row.movementType === "IN" ? "+" : row.movementType === "OUT" ? "-" : "";
-                const color = row.movementType === "IN" 
+                const prefix = row.movementType === "ENTRY" ? "+" : row.movementType === "EXIT" ? "-" : "";
+                const color = row.movementType === "ENTRY" 
                     ? "text-success" 
-                    : row.movementType === "OUT" 
+                    : row.movementType === "EXIT" || row.movementType === "EXPIRED_WRITE_OFF"
                     ? "text-danger" 
                     : "text-text";
                 return <span className={`font-bold ${color}`}>{prefix}{qty}</span>;

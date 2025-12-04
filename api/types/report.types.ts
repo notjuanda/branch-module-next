@@ -25,7 +25,7 @@ export interface InventoryCountResponse {
 }
 
 // Tipo de movimiento
-export type MovementType = "IN" | "OUT" | "TRANSFER" | "ADJUSTMENT";
+export type MovementType = "ENTRY" | "EXIT" | "TRANSFER" | "ADJUSTMENT" | "EXPIRED_WRITE_OFF";
 
 // Reporte de movimientos
 export interface MovementReportResponse {

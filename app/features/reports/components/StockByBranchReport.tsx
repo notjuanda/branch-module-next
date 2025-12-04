@@ -163,7 +163,7 @@ export default function StockByBranchReport() {
                 <DataTable
                     data={stockData}
                     columns={columns}
-                    rowKey="productId"
+                    rowKey={(row) => `${row.branchId}-${row.productId}`}
                     loading={loading}
                     paginated
                     pageSize={10}
