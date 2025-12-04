@@ -68,3 +68,38 @@ export type {
     CorpPhoneAssignmentResponse,
     AssignCorpPhoneRequest,
 } from "./assignment.types";
+
+// Inventory
+export type {
+    InventoryItem,
+    InventoryRequest,
+    InventoryResponse,
+    ProductRequest,
+    ProductResponse,
+    ProductStatusUpdate,
+} from "./inventory.types";
+
+// Batch (Lotes)
+export type {
+    BatchRequest,
+    BatchUpdateRequest,
+    BatchNotificationRequest,
+    BatchResponse,
+    ExpiringBatchNotification,
+} from "./batch.types";
+
+// BranchStock (Stock en Sucursales)
+export type {
+    BranchStockRequest,
+    BranchStockUpdateRequest,
+    BranchStockResponse,
+    BranchStockTransferRequest,
+} from "./branchStock.types";
+
+// Reports (Reportes de inventario)
+export type {
+    StockByBranchResponse,
+    InventoryCountResponse,
+    MovementType,
+    MovementReportResponse,
+} from "./report.types";

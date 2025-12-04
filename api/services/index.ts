@@ -7,3 +7,7 @@ export { scheduleService } from "./schedule.service";
 export { branchPhoneService } from "./branchPhone.service";
 export { branchImageService } from "./branchImage.service";
 export { assignmentService } from "./assignment.service";
+export { inventoryService } from "./inventory.service";
+export { batchService } from "./batch.service";
+export { branchStockService } from "./branchStock.service";
+export { reportService } from "./report.service";

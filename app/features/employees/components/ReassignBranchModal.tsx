@@ -375,9 +375,9 @@ export default function ReassignBranchModal({
                 onClick={handleReassign}
                 disabled={!selectedBranchId || !position.trim() || reassigning}
                 sx={{
-                  backgroundColor: isFirstAssignment ? "var(--color-success)" : "var(--color-primary)",
+                  backgroundColor: "var(--color-success)",
                   "&:hover": {
-                    backgroundColor: isFirstAssignment ? "var(--color-success-hover)" : "var(--color-primary-hover)",
+                    backgroundColor: "var(--color-success-hover)",
                   },
                 }}
               >

@@ -3,6 +3,7 @@ export { default as BranchDetailModal } from "./BranchDetailModal";
 export { default as BranchFormModal } from "./BranchFormModal";
 export { default as BranchImagesModal } from "./BranchImagesModal";
 export { default as BranchEmployeesModal } from "./BranchEmployeesModal";
+export { default as BranchScheduleModal } from "./BranchScheduleModal";
 export { default as AssignPhoneModal } from "./AssignPhoneModal";
 export { default as AddBranchPhoneModal } from "./AddBranchPhoneModal";
 export { default as EditBranchPhoneModal } from "./EditBranchPhoneModal";

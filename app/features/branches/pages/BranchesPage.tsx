@@ -16,6 +16,7 @@ import {
     BranchFormModal,
     BranchImagesModal,
     BranchEmployeesModal,
+    BranchScheduleModal,
 } from "../components";
 import { useBranches, useBranchForm } from "../hooks";
 import { BranchResponse } from "@/api/types";
@@ -41,6 +42,10 @@ export default function BranchesPage() {
     // Estado para modal de empleados
     const [employeesModalOpen, setEmployeesModalOpen] = useState(false);
     const [branchForEmployees, setBranchForEmployees] = useState<BranchResponse | null>(null);
+
+    // Estado para modal de horarios
+    const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+    const [branchForSchedule, setBranchForSchedule] = useState<BranchResponse | null>(null);
 
     const handleViewDetail = (branch: BranchResponse) => {
         setSelectedBranch(branch);
@@ -70,6 +75,16 @@ export default function BranchesPage() {
     const handleCloseEmployeesModal = () => {
         setEmployeesModalOpen(false);
         setBranchForEmployees(null);
+    };
+
+    const handleScheduleClick = (branch: BranchResponse) => {
+        setBranchForSchedule(branch);
+        setScheduleModalOpen(true);
+    };
+
+    const handleCloseScheduleModal = () => {
+        setScheduleModalOpen(false);
+        setBranchForSchedule(null);
     };
 
     const handleFormSuccess = () => {
@@ -147,6 +162,7 @@ export default function BranchesPage() {
                                 onEdit={() => openEdit(branch)}
                                 onImagesClick={() => handleImagesClick(branch)}
                                 onEmployeesClick={() => handleEmployeesClick(branch)}
+                                onScheduleClick={() => handleScheduleClick(branch)}
                             />
                         </Grid>
                     ))}
@@ -202,6 +218,13 @@ export default function BranchesPage() {
                 open={employeesModalOpen}
                 branch={branchForEmployees}
                 onClose={handleCloseEmployeesModal}
+            />
+
+            {/* Modal de horarios */}
+            <BranchScheduleModal
+                open={scheduleModalOpen}
+                branch={branchForSchedule}
+                onClose={handleCloseScheduleModal}
             />
         </Box>
     );

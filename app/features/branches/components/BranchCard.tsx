@@ -10,6 +10,7 @@ import {
   HiOutlinePhotograph,
   HiOutlineOfficeBuilding,
   HiOutlineUserGroup,
+  HiOutlineClock,
 } from "react-icons/hi";
 import { HiMapPin } from "react-icons/hi2";
 import { BranchResponse } from "@/api/types";
@@ -29,6 +30,7 @@ interface BranchCardProps {
   onStatusChange?: (branch: BranchResponse) => void;
   onImagesClick?: (branch: BranchResponse) => void;
   onEmployeesClick?: (branch: BranchResponse) => void;
+  onScheduleClick?: (branch: BranchResponse) => void;
 }
 
 export default function BranchCard({
@@ -38,6 +40,7 @@ export default function BranchCard({
   onStatusChange,
   onImagesClick,
   onEmployeesClick,
+  onScheduleClick,
 }: BranchCardProps) {
   const [isToggling, setIsToggling] = useState(false);
   const [localActive, setLocalActive] = useState(branch.active);
@@ -197,6 +200,24 @@ export default function BranchCard({
       </CardContent>
 
       <CardFooter className="flex justify-end gap-1 pt-2 border-t border-border/50">
+        <Tooltip title="Horarios">
+          <IconButton
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              onScheduleClick?.(branch);
+            }}
+            sx={{
+              color: "var(--color-text-muted)",
+              "&:hover": {
+                backgroundColor: "var(--color-warning)",
+                color: "white",
+              },
+            }}
+          >
+            <HiOutlineClock size={18} />
+          </IconButton>
+        </Tooltip>
         <Tooltip title="Empleados">
           <IconButton
             size="small"

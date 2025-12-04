@@ -20,7 +20,7 @@ import {
   useMediaQuery,
 } from "@mui/material";
 import { HiMenu, HiOutlineLogout } from "react-icons/hi";
-import { HiOutlineBuildingStorefront, HiOutlineUsers, HiBuildingOffice2 } from "react-icons/hi2";
+import { HiOutlineBuildingStorefront, HiOutlineUsers, HiBuildingOffice2, HiOutlineArchiveBox, HiOutlineDocumentChartBar } from "react-icons/hi2";
 import { useNavigate } from "@/hooks";
 import { useLoading } from "@/contexts";
 
@@ -38,6 +38,9 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: "Sucursales", path: "/branches", icon: <HiOutlineBuildingStorefront size={22} /> },
   { label: "Empleados", path: "/employees", icon: <HiOutlineUsers size={22} /> },
+  { label: "Productos", path: "/products", icon: <HiBuildingOffice2 size={22} /> },
+  { label: "Lotes", path: "/batches", icon: <HiOutlineArchiveBox size={22} /> },
+  { label: "Reportes", path: "/reports", icon: <HiOutlineDocumentChartBar size={22} /> },
 ];
 
 interface SidebarProps {

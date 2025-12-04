@@ -6,6 +6,7 @@ import { ComponentType } from "react";
 import { LoginPage } from "@/app/features/auth/pages";
 import { BranchesPage } from "@/app/features/branches/pages";
 import { EmployeesPage } from "@/app/features/employees/pages";
+import { ProductsPage } from "@/app/features/products/pages"
 
 // ===== TYPES =====
 export interface RouteConfig {
@@ -20,6 +21,7 @@ export const PATHS = {
     LOGIN: "/login",
     BRANCHES: "/branches",
     EMPLOYEES: "/employees",
+    PRODUCTS: "/products",
 } as const;
 
 // ===== ROUTES CONFIGURATION =====
@@ -41,6 +43,12 @@ export const ROUTES: RouteConfig[] = [
         component: EmployeesPage,
         isProtected: true,
         title: "Empleados",
+    },
+    {
+        path: PATHS.PRODUCTS,
+        component: ProductsPage,
+        isProtected: true,
+        title: "Productos",
     },
 ];
 
