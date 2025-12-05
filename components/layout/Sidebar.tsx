@@ -38,7 +38,6 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: "Sucursales", path: "/branches", icon: <HiOutlineBuildingStorefront size={22} /> },
   { label: "Empleados", path: "/employees", icon: <HiOutlineUsers size={22} /> },
-  { label: "Productos", path: "/products", icon: <HiBuildingOffice2 size={22} /> },
   { label: "Lotes", path: "/batches", icon: <HiOutlineArchiveBox size={22} /> },
   { label: "Reportes", path: "/reports", icon: <HiOutlineDocumentChartBar size={22} /> },
 ];

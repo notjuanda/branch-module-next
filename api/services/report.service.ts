@@ -1,4 +1,8 @@
 // ===== REPORT SERVICE =====
+// Este servicio maneja reportes a través del proxy de sucursales
+// Frontend -> nginx -> branch-module -> inventory-container
+
+import { apiClient } from "@/api/config";
 
 import type {
     StockByBranchResponse,
@@ -7,77 +11,58 @@ import type {
     MovementType,
 } from "@/api/types";
 
-const INVENTORY_API_URL = process.env.NEXT_PUBLIC_API_URL_2 || "http://localhost:8081";
-
-async function reportRequest<T>(
-    endpoint: string,
-    options: RequestInit = {}
-): Promise<T> {
-    const url = `${INVENTORY_API_URL}${endpoint}`;
-
-    const response = await fetch(url, {
-        ...options,
-        headers: {
-            "Content-Type": "application/json",
-            ...options.headers,
-        },
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Error ${response.status}`);
-    }
-
-    return response.json();
-}
+// Endpoints para reports (requieren branchId para saber a qué contenedor ir)
+const getReportEndpoints = (branchId: string) => ({
+    STOCK_BY_BRANCH: `/api/branches/${branchId}/inventory/reports/stock/branch/${branchId}`,
+    STOCK_ALL_BRANCHES: `/api/branches/${branchId}/inventory/reports/stock/all-branches`,
+    INVENTORY_COUNT: `/api/branches/${branchId}/inventory/reports/inventory-count/branch/${branchId}`,
+    INVENTORY_COUNT_ALL: `/api/branches/${branchId}/inventory/reports/inventory-count/all-branches`,
+    MOVEMENTS: `/api/branches/${branchId}/inventory/reports/movements/branch/${branchId}`,
+    MOVEMENTS_BY_TYPE: (type: MovementType) => `/api/branches/${branchId}/inventory/reports/movements/branch/${branchId}/type/${type}`,
+    MOVEMENTS_BY_PRODUCT: (productId: string) => `/api/branches/${branchId}/inventory/reports/movements/product/${productId}`,
+});
 
 export const reportService = {
-    // ===== STOCK POR SUCURSAL =====
-    
     /**
      * Obtener stock de una sucursal específica
      */
     async getStockByBranch(branchId: string): Promise<StockByBranchResponse[]> {
-        return reportRequest<StockByBranchResponse[]>(`/api/reports/stock/branch/${branchId}`);
+        const endpoints = getReportEndpoints(branchId);
+        return apiClient.get<StockByBranchResponse[]>(endpoints.STOCK_BY_BRANCH);
     },
 
     /**
      * Obtener stock de todas las sucursales
      */
-    async getAllStockByBranches(): Promise<StockByBranchResponse[]> {
-        return reportRequest<StockByBranchResponse[]>("/api/reports/stock/all-branches");
+    async getAllStockByBranches(branchId: string): Promise<StockByBranchResponse[]> {
+        const endpoints = getReportEndpoints(branchId);
+        return apiClient.get<StockByBranchResponse[]>(endpoints.STOCK_ALL_BRANCHES);
     },
-
-    // ===== CONTEO DE INVENTARIO =====
 
     /**
      * Obtener conteo de inventario de una sucursal
      */
     async getInventoryCount(branchId: string): Promise<InventoryCountResponse> {
-        return reportRequest<InventoryCountResponse>(`/api/reports/inventory-count/branch/${branchId}`);
+        const endpoints = getReportEndpoints(branchId);
+        return apiClient.get<InventoryCountResponse>(endpoints.INVENTORY_COUNT);
     },
 
     /**
      * Obtener conteo de inventario de todas las sucursales
      */
-    async getAllInventoryCounts(): Promise<InventoryCountResponse[]> {
-        return reportRequest<InventoryCountResponse[]>("/api/reports/inventory-count/all-branches");
+    async getAllInventoryCounts(branchId: string): Promise<InventoryCountResponse[]> {
+        const endpoints = getReportEndpoints(branchId);
+        return apiClient.get<InventoryCountResponse[]>(endpoints.INVENTORY_COUNT_ALL);
     },
-
-    // ===== MOVIMIENTOS =====
 
     /**
      * Obtener movimientos de una sucursal en un rango de fechas
      */
-    async getMovementsByBranch(
-        branchId: string,
-        from: string,
-        to: string
-    ): Promise<MovementReportResponse[]> {
-        const params = new URLSearchParams({ from, to });
-        return reportRequest<MovementReportResponse[]>(
-            `/api/reports/movements/branch/${branchId}?${params}`
-        );
+    async getMovementsByBranch(branchId: string, from: string, to: string): Promise<MovementReportResponse[]> {
+        const endpoints = getReportEndpoints(branchId);
+        return apiClient.get<MovementReportResponse[]>(endpoints.MOVEMENTS, {
+            params: { from, to },
+        });
     },
 
     /**
@@ -89,24 +74,25 @@ export const reportService = {
         from: string,
         to: string
     ): Promise<MovementReportResponse[]> {
-        const params = new URLSearchParams({ from, to });
-        return reportRequest<MovementReportResponse[]>(
-            `/api/reports/movements/branch/${branchId}/type/${type}?${params}`
-        );
+        const endpoints = getReportEndpoints(branchId);
+        return apiClient.get<MovementReportResponse[]>(endpoints.MOVEMENTS_BY_TYPE(type), {
+            params: { from, to },
+        });
     },
 
     /**
      * Obtener movimientos de un producto
      */
     async getMovementsByProduct(
+        branchId: string,
         productId: string,
         from: string,
         to: string
     ): Promise<MovementReportResponse[]> {
-        const params = new URLSearchParams({ from, to });
-        return reportRequest<MovementReportResponse[]>(
-            `/api/reports/movements/product/${productId}?${params}`
-        );
+        const endpoints = getReportEndpoints(branchId);
+        return apiClient.get<MovementReportResponse[]>(endpoints.MOVEMENTS_BY_PRODUCT(productId), {
+            params: { from, to },
+        });
     },
 };
 

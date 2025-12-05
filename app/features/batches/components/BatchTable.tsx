@@ -29,12 +29,14 @@ interface BatchTableProps {
     batches: BatchResponse[];
     onEdit: (batch: BatchResponse) => void;
     onDelete?: () => void;
+    branchId?: string;
 }
 
 export default function BatchTable({
     batches,
     onEdit,
     onDelete,
+    branchId,
 }: BatchTableProps) {
     const { showSuccess, showError } = useToast();
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -47,11 +49,11 @@ export default function BatchTable({
     };
 
     const handleConfirmDelete = async () => {
-        if (!batchToDelete) return;
+        if (!batchToDelete || !branchId) return;
 
         setDeleting(true);
         try {
-            await batchService.delete(batchToDelete.id);
+            await batchService.delete(branchId, batchToDelete.id);
             showSuccess(`Lote "${batchToDelete.batchNumber}" eliminado`);
             onDelete?.();
             setDeleteModalOpen(false);
@@ -71,8 +73,9 @@ export default function BatchTable({
     };
 
     const handleToggleNotification = async (batch: BatchResponse) => {
+        if (!branchId) return;
         try {
-            await batchService.toggleNotification(batch.id, {
+            await batchService.toggleNotification(branchId, batch.id, {
                 notificationEnabled: !batch.notificationEnabled,
             });
             showSuccess(

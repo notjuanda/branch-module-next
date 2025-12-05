@@ -1,141 +1,106 @@
 // ===== INVENTORY SERVICE =====
+// Este servicio maneja productos a través del proxy de sucursales
+// Frontend -> nginx -> branch-module -> inventory-container
 
 import type {
     ProductRequest,
     ProductResponse,
     ProductStatusUpdate,
 } from "../types/inventory.types";
+import { apiClient } from "@/api/config";
 
-const INVENTORY_BASE_URL = process.env.NEXT_PUBLIC_API_URL_2 || "http://localhost:8081";
-
-const ENDPOINTS = {
-    PRODUCTS: `${INVENTORY_BASE_URL}/api/products`,
-    PRODUCT_BY_ID: (id: string) => `${INVENTORY_BASE_URL}/api/products/${id}`,
-    PRODUCT_BY_SKU: (sku: string) => `${INVENTORY_BASE_URL}/api/products/sku/${sku}`,
-    PRODUCTS_BY_BRAND: (brand: string) => `${INVENTORY_BASE_URL}/api/products/brand/${brand}`,
-    PRODUCTS_BY_CATEGORY: (category: string) => `${INVENTORY_BASE_URL}/api/products/category/${category}`,
-    PRODUCTS_SEARCH: `${INVENTORY_BASE_URL}/api/products/search`,
-    PRODUCT_STATUS: (id: string) => `${INVENTORY_BASE_URL}/api/products/${id}/status`,
-};
-
-// Cliente HTTP simple para el módulo de inventario (usa su propia URL base)
-async function inventoryRequest<T>(url: string, options: RequestInit = {}): Promise<T> {
-    const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
-    
-    const response = await fetch(url, {
-        ...options,
-        headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            ...options.headers,
-        },
-    });
-
-    if (!response.ok) {
-        // Intentar extraer el mensaje de error del backend
-        let errorMessage = `HTTP error! status: ${response.status}`;
-        try {
-            const errorBody = await response.json();
-            if (errorBody.message) {
-                errorMessage = errorBody.message;
-            } else if (errorBody.error) {
-                errorMessage = errorBody.error;
-            }
-        } catch {
-            // Si no se puede parsear el JSON, usar el mensaje genérico
-        }
-        throw new Error(errorMessage);
-    }
-
-    // Para DELETE que no retorna contenido
-    if (response.status === 204 || options.method === "DELETE") {
-        return undefined as T;
-    }
-
-    return response.json();
-}
+// Endpoints para productos (requieren branchId para saber a qué contenedor ir)
+const getInventoryEndpoints = (branchId: string) => ({
+    PRODUCTS: `/api/branches/${branchId}/inventory/products`,
+    PRODUCT_BY_ID: (id: string) => `/api/branches/${branchId}/inventory/products/${id}`,
+    PRODUCT_BY_SKU: (sku: string) => `/api/branches/${branchId}/inventory/products/sku/${sku}`,
+    PRODUCTS_BY_BRAND: (brand: string) => `/api/branches/${branchId}/inventory/products/brand/${brand}`,
+    PRODUCTS_BY_CATEGORY: (category: string) => `/api/branches/${branchId}/inventory/products/category/${category}`,
+    PRODUCTS_SEARCH: `/api/branches/${branchId}/inventory/products/search`,
+    PRODUCT_STATUS: (id: string) => `/api/branches/${branchId}/inventory/products/${id}/status`,
+});
 
 export const inventoryService = {
     /**
-     * List all products
+     * List all products (via branch inventory proxy)
      */
-    listProducts: async (): Promise<ProductResponse[]> => {
-        return inventoryRequest<ProductResponse[]>(ENDPOINTS.PRODUCTS);
+    listProducts: async (branchId: string): Promise<ProductResponse[]> => {
+        const endpoints = getInventoryEndpoints(branchId);
+        return apiClient.get<ProductResponse[]>(endpoints.PRODUCTS);
     },
 
     /**
      * Get product by ID
      */
-    getProductById: async (id: string): Promise<ProductResponse> => {
-        return inventoryRequest<ProductResponse>(ENDPOINTS.PRODUCT_BY_ID(id));
+    getProductById: async (branchId: string, id: string): Promise<ProductResponse> => {
+        const endpoints = getInventoryEndpoints(branchId);
+        return apiClient.get<ProductResponse>(endpoints.PRODUCT_BY_ID(id));
     },
 
     /**
      * Create a new product
      */
-    createProduct: async (data: ProductRequest): Promise<ProductResponse> => {
-        return inventoryRequest<ProductResponse>(ENDPOINTS.PRODUCTS, {
-            method: "POST",
-            body: JSON.stringify(data),
-        });
+    createProduct: async (branchId: string, data: ProductRequest): Promise<ProductResponse> => {
+        const endpoints = getInventoryEndpoints(branchId);
+        return apiClient.post<ProductResponse>(endpoints.PRODUCTS, data);
     },
 
     /**
      * Update a product
      */
-    updateProduct: async (id: string, data: ProductRequest): Promise<ProductResponse> => {
-        return inventoryRequest<ProductResponse>(ENDPOINTS.PRODUCT_BY_ID(id), {
-            method: "PUT",
-            body: JSON.stringify(data),
-        });
+    updateProduct: async (branchId: string, id: string, data: ProductRequest): Promise<ProductResponse> => {
+        const endpoints = getInventoryEndpoints(branchId);
+        return apiClient.put<ProductResponse>(endpoints.PRODUCT_BY_ID(id), data);
     },
 
     /**
      * Delete a product
      */
-    deleteProduct: async (id: string): Promise<void> => {
-        await inventoryRequest<void>(ENDPOINTS.PRODUCT_BY_ID(id), {
-            method: "DELETE",
-        });
+    deleteProduct: async (branchId: string, id: string): Promise<void> => {
+        const endpoints = getInventoryEndpoints(branchId);
+        return apiClient.delete<void>(endpoints.PRODUCT_BY_ID(id));
     },
 
     /**
      * Get product by SKU
      */
-    getProductBySku: async (sku: string): Promise<ProductResponse> => {
-        return inventoryRequest<ProductResponse>(ENDPOINTS.PRODUCT_BY_SKU(sku));
+    getProductBySku: async (branchId: string, sku: string): Promise<ProductResponse> => {
+        const endpoints = getInventoryEndpoints(branchId);
+        return apiClient.get<ProductResponse>(endpoints.PRODUCT_BY_SKU(sku));
     },
 
     /**
      * List products by brand
      */
-    listProductsByBrand: async (brand: string): Promise<ProductResponse[]> => {
-        return inventoryRequest<ProductResponse[]>(ENDPOINTS.PRODUCTS_BY_BRAND(brand));
+    listProductsByBrand: async (branchId: string, brand: string): Promise<ProductResponse[]> => {
+        const endpoints = getInventoryEndpoints(branchId);
+        return apiClient.get<ProductResponse[]>(endpoints.PRODUCTS_BY_BRAND(brand));
     },
 
     /**
      * List products by category
      */
-    listProductsByCategory: async (category: string): Promise<ProductResponse[]> => {
-        return inventoryRequest<ProductResponse[]>(ENDPOINTS.PRODUCTS_BY_CATEGORY(category));
+    listProductsByCategory: async (branchId: string, category: string): Promise<ProductResponse[]> => {
+        const endpoints = getInventoryEndpoints(branchId);
+        return apiClient.get<ProductResponse[]>(endpoints.PRODUCTS_BY_CATEGORY(category));
     },
 
     /**
      * Search products by keyword
      */
-    searchProducts: async (keyword: string): Promise<ProductResponse[]> => {
-        const url = `${ENDPOINTS.PRODUCTS_SEARCH}?keyword=${encodeURIComponent(keyword)}`;
-        return inventoryRequest<ProductResponse[]>(url);
+    searchProducts: async (branchId: string, keyword: string): Promise<ProductResponse[]> => {
+        const endpoints = getInventoryEndpoints(branchId);
+        return apiClient.get<ProductResponse[]>(endpoints.PRODUCTS_SEARCH, {
+            params: { keyword },
+        });
     },
 
     /**
      * Update product status (active/inactive)
      */
-    updateProductStatus: async (id: string, data: ProductStatusUpdate): Promise<ProductResponse> => {
-        return inventoryRequest<ProductResponse>(ENDPOINTS.PRODUCT_STATUS(id), {
-            method: "PATCH",
-            body: JSON.stringify(data),
-        });
+    updateProductStatus: async (branchId: string, id: string, data: ProductStatusUpdate): Promise<ProductResponse> => {
+        const endpoints = getInventoryEndpoints(branchId);
+        return apiClient.patch<ProductResponse>(endpoints.PRODUCT_STATUS(id), data);
     },
 };
 

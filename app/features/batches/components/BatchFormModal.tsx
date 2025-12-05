@@ -32,6 +32,7 @@ interface BatchFormModalProps {
     batch?: BatchResponse | null;
     onSuccess?: (batch: BatchResponse) => void;
     preselectedProductId?: string;
+    branchId?: string;
 }
 
 // Componente de campo con icono
@@ -82,6 +83,7 @@ export default function BatchFormModal({
     batch,
     onSuccess,
     preselectedProductId,
+    branchId,
 }: BatchFormModalProps) {
     const isEditing = !!batch;
     const { showSuccess, showError } = useToast();
@@ -102,10 +104,10 @@ export default function BatchFormModal({
 
     // Cargar productos
     useEffect(() => {
-        if (open) {
+        if (open && branchId) {
             setLoadingProducts(true);
             inventoryService
-                .listProducts()
+                .listProducts(branchId)
                 .then((data) => setProducts(data))
                 .catch((err) => {
                     console.error("Error loading products:", err);
@@ -113,7 +115,7 @@ export default function BatchFormModal({
                 })
                 .finally(() => setLoadingProducts(false));
         }
-    }, [open, showError]);
+    }, [open, branchId, showError]);
 
     // Resetear formulario cuando cambia el batch o se abre/cierra
     useEffect(() => {
@@ -170,6 +172,10 @@ export default function BatchFormModal({
     // Manejar submit
     const handleSubmit = async () => {
         if (!validateForm()) return;
+        if (!branchId) {
+            showError("Selecciona una sucursal primero");
+            return;
+        }
 
         setLoading(true);
         try {
@@ -182,7 +188,7 @@ export default function BatchFormModal({
                     expirationDate,
                     warningDaysBeforeExpiration: warningDays,
                 };
-                result = await batchService.update(batch.id, updateData);
+                result = await batchService.update(branchId, batch.id, updateData);
                 showSuccess(`Lote "${result.batchNumber}" actualizado`);
             } else {
                 const createData: BatchRequest = {
@@ -192,7 +198,7 @@ export default function BatchFormModal({
                     expirationDate,
                     warningDaysBeforeExpiration: warningDays,
                 };
-                result = await batchService.create(createData);
+                result = await batchService.create(branchId, createData);
                 showSuccess(`Lote "${result.batchNumber}" creado`);
             }
 

@@ -11,11 +11,13 @@ import {
   HiOutlineOfficeBuilding,
   HiOutlineUserGroup,
   HiOutlineClock,
+  HiOutlineCube,
 } from "react-icons/hi";
 import { HiMapPin } from "react-icons/hi2";
 import { BranchResponse } from "@/api/types";
 import { branchService } from "@/api/services";
 import { API_CONFIG } from "@/api/config";
+import { useNavigate } from "@/hooks";
 
 // Helper para construir URL completa de imagen
 const getImageUrl = (url: string) => {
@@ -31,6 +33,7 @@ interface BranchCardProps {
   onImagesClick?: (branch: BranchResponse) => void;
   onEmployeesClick?: (branch: BranchResponse) => void;
   onScheduleClick?: (branch: BranchResponse) => void;
+  onInventoryClick?: (branch: BranchResponse) => void;
 }
 
 export default function BranchCard({
@@ -41,10 +44,12 @@ export default function BranchCard({
   onImagesClick,
   onEmployeesClick,
   onScheduleClick,
+  onInventoryClick,
 }: BranchCardProps) {
   const [isToggling, setIsToggling] = useState(false);
   const [localActive, setLocalActive] = useState(branch.active);
   const { showSuccess, showError } = useToast();
+  const { navigate } = useNavigate();
 
   const handleCardClick = () => {
     onClick?.(branch);
@@ -200,6 +205,37 @@ export default function BranchCard({
       </CardContent>
 
       <CardFooter className="flex justify-end gap-1 pt-2 border-t border-border/50">
+        <Tooltip title="Ver productos de la sucursal">
+          <IconButton
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!branch.inventoryPort) {
+                showError(
+                  "La sucursal no tiene un contenedor de inventario asignado",
+                  "Inventario no disponible"
+                );
+                return;
+              }
+
+              const searchParams = new URLSearchParams({
+                branchId: branch.id,
+                inventoryPort: String(branch.inventoryPort),
+              });
+
+              navigate(`/products?${searchParams.toString()}`);
+            }}
+            sx={{
+              color: branch.inventoryPort ? "var(--color-success)" : "var(--color-text-muted)",
+              "&:hover": {
+                backgroundColor: "var(--color-success)",
+                color: "white",
+              },
+            }}
+          >
+            <HiOutlineCube size={18} />
+          </IconButton>
+        </Tooltip>
         <Tooltip title="Horarios">
           <IconButton
             size="small"

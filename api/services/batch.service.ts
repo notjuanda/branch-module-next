@@ -1,3 +1,7 @@
+// ===== BATCH SERVICE =====
+// Este servicio maneja lotes a través del proxy de sucursales
+// Frontend -> nginx -> branch-module -> inventory-container
+
 import type {
     BatchRequest,
     BatchUpdateRequest,
@@ -5,112 +9,84 @@ import type {
     BatchResponse,
     ExpiringBatchNotification,
 } from "@/api/types";
+import { apiClient } from "@/api/config";
 
-const INVENTORY_API_URL = process.env.NEXT_PUBLIC_API_URL_2 || "http://localhost:8081";
-
-async function batchRequest<T>(
-    endpoint: string,
-    options: RequestInit = {}
-): Promise<T> {
-    const url = `${INVENTORY_API_URL}${endpoint}`;
-
-    const response = await fetch(url, {
-        ...options,
-        headers: {
-            "Content-Type": "application/json",
-            ...options.headers,
-        },
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Error ${response.status}`);
-    }
-
-    // Manejar respuestas sin contenido (204 o body vacío)
-    const contentLength = response.headers.get("content-length");
-    if (response.status === 204 || contentLength === "0") {
-        return undefined as T;
-    }
-
-    // Intentar parsear JSON, si falla retornar undefined
-    const text = await response.text();
-    if (!text) {
-        return undefined as T;
-    }
-
-    return JSON.parse(text);
-}
+// Endpoints para batches (requieren branchId para saber a qué contenedor ir)
+const getBatchEndpoints = (branchId: string) => ({
+    BATCHES: `/api/branches/${branchId}/inventory/batches`,
+    BATCH_BY_ID: (batchId: string) => `/api/branches/${branchId}/inventory/batches/${batchId}`,
+    BATCHES_BY_PRODUCT: (productId: string) => `/api/branches/${branchId}/inventory/batches/product/${productId}`,
+    EXPIRING_SOON: `/api/branches/${branchId}/inventory/batches/expiring-soon`,
+    EXPIRED: `/api/branches/${branchId}/inventory/batches/expired`,
+    NOTIFICATIONS: `/api/branches/${branchId}/inventory/batches/notifications`,
+    BATCH_NOTIFICATION: (batchId: string) => `/api/branches/${branchId}/inventory/batches/${batchId}/notification`,
+    DEACTIVATE_EXPIRED: `/api/branches/${branchId}/inventory/batches/deactivate-expired`,
+});
 
 export const batchService = {
     // Listar todos los lotes
-    async list(): Promise<BatchResponse[]> {
-        return batchRequest<BatchResponse[]>("/api/batches");
+    async list(branchId: string): Promise<BatchResponse[]> {
+        const endpoints = getBatchEndpoints(branchId);
+        return apiClient.get<BatchResponse[]>(endpoints.BATCHES);
     },
 
     // Obtener lote por ID
-    async getById(batchId: string): Promise<BatchResponse> {
-        return batchRequest<BatchResponse>(`/api/batches/${batchId}`);
+    async getById(branchId: string, batchId: string): Promise<BatchResponse> {
+        const endpoints = getBatchEndpoints(branchId);
+        return apiClient.get<BatchResponse>(endpoints.BATCH_BY_ID(batchId));
     },
 
     // Listar lotes por producto
-    async listByProduct(productId: string): Promise<BatchResponse[]> {
-        return batchRequest<BatchResponse[]>(`/api/batches/product/${productId}`);
+    async listByProduct(branchId: string, productId: string): Promise<BatchResponse[]> {
+        const endpoints = getBatchEndpoints(branchId);
+        return apiClient.get<BatchResponse[]>(endpoints.BATCHES_BY_PRODUCT(productId));
     },
 
     // Listar lotes próximos a vencer
-    async listExpiringSoon(): Promise<BatchResponse[]> {
-        return batchRequest<BatchResponse[]>("/api/batches/expiring-soon");
+    async listExpiringSoon(branchId: string): Promise<BatchResponse[]> {
+        const endpoints = getBatchEndpoints(branchId);
+        return apiClient.get<BatchResponse[]>(endpoints.EXPIRING_SOON);
     },
 
     // Listar lotes vencidos
-    async listExpired(): Promise<BatchResponse[]> {
-        return batchRequest<BatchResponse[]>("/api/batches/expired");
+    async listExpired(branchId: string): Promise<BatchResponse[]> {
+        const endpoints = getBatchEndpoints(branchId);
+        return apiClient.get<BatchResponse[]>(endpoints.EXPIRED);
     },
 
     // Obtener notificaciones de lotes por vencer
-    async getExpiringNotifications(): Promise<ExpiringBatchNotification[]> {
-        return batchRequest<ExpiringBatchNotification[]>("/api/batches/notifications");
+    async getExpiringNotifications(branchId: string): Promise<ExpiringBatchNotification[]> {
+        const endpoints = getBatchEndpoints(branchId);
+        return apiClient.get<ExpiringBatchNotification[]>(endpoints.NOTIFICATIONS);
     },
 
     // Crear lote
-    async create(data: BatchRequest): Promise<BatchResponse> {
-        return batchRequest<BatchResponse>("/api/batches", {
-            method: "POST",
-            body: JSON.stringify(data),
-        });
+    async create(branchId: string, data: BatchRequest): Promise<BatchResponse> {
+        const endpoints = getBatchEndpoints(branchId);
+        return apiClient.post<BatchResponse>(endpoints.BATCHES, data);
     },
 
     // Actualizar lote
-    async update(batchId: string, data: BatchUpdateRequest): Promise<BatchResponse> {
-        return batchRequest<BatchResponse>(`/api/batches/${batchId}`, {
-            method: "PUT",
-            body: JSON.stringify(data),
-        });
+    async update(branchId: string, batchId: string, data: BatchUpdateRequest): Promise<BatchResponse> {
+        const endpoints = getBatchEndpoints(branchId);
+        return apiClient.put<BatchResponse>(endpoints.BATCH_BY_ID(batchId), data);
     },
 
     // Activar/desactivar notificación
-    async toggleNotification(
-        batchId: string,
-        data: BatchNotificationRequest
-    ): Promise<BatchResponse> {
-        return batchRequest<BatchResponse>(`/api/batches/${batchId}/notification`, {
-            method: "PATCH",
-            body: JSON.stringify(data),
-        });
+    async toggleNotification(branchId: string, batchId: string, data: BatchNotificationRequest): Promise<BatchResponse> {
+        const endpoints = getBatchEndpoints(branchId);
+        return apiClient.patch<BatchResponse>(endpoints.BATCH_NOTIFICATION(batchId), data);
     },
 
     // Desactivar lotes vencidos
-    async deactivateExpiredBatches(): Promise<void> {
-        return batchRequest<void>("/api/batches/deactivate-expired", {
-            method: "POST",
-        });
+    async deactivateExpiredBatches(branchId: string): Promise<void> {
+        const endpoints = getBatchEndpoints(branchId);
+        return apiClient.post<void>(endpoints.DEACTIVATE_EXPIRED);
     },
 
     // Eliminar lote
-    async delete(batchId: string): Promise<void> {
-        return batchRequest<void>(`/api/batches/${batchId}`, {
-            method: "DELETE",
-        });
+    async delete(branchId: string, batchId: string): Promise<void> {
+        const endpoints = getBatchEndpoints(branchId);
+        return apiClient.delete<void>(endpoints.BATCH_BY_ID(batchId));
     },
 };

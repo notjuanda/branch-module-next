@@ -17,6 +17,7 @@ import {
     BranchImagesModal,
     BranchEmployeesModal,
     BranchScheduleModal,
+    BranchInventoryModal,
 } from "../components";
 import { useBranches, useBranchForm } from "../hooks";
 import { BranchResponse } from "@/api/types";
@@ -46,6 +47,10 @@ export default function BranchesPage() {
     // Estado para modal de horarios
     const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
     const [branchForSchedule, setBranchForSchedule] = useState<BranchResponse | null>(null);
+
+    // Estado para modal de inventario
+    const [inventoryModalOpen, setInventoryModalOpen] = useState(false);
+    const [branchForInventory, setBranchForInventory] = useState<BranchResponse | null>(null);
 
     const handleViewDetail = (branch: BranchResponse) => {
         setSelectedBranch(branch);
@@ -85,6 +90,16 @@ export default function BranchesPage() {
     const handleCloseScheduleModal = () => {
         setScheduleModalOpen(false);
         setBranchForSchedule(null);
+    };
+
+    const handleInventoryClick = (branch: BranchResponse) => {
+        setBranchForInventory(branch);
+        setInventoryModalOpen(true);
+    };
+
+    const handleCloseInventoryModal = () => {
+        setInventoryModalOpen(false);
+        setBranchForInventory(null);
     };
 
     const handleFormSuccess = () => {
@@ -163,6 +178,7 @@ export default function BranchesPage() {
                                 onImagesClick={() => handleImagesClick(branch)}
                                 onEmployeesClick={() => handleEmployeesClick(branch)}
                                 onScheduleClick={() => handleScheduleClick(branch)}
+                                onInventoryClick={() => handleInventoryClick(branch)}
                             />
                         </Grid>
                     ))}
@@ -225,6 +241,13 @@ export default function BranchesPage() {
                 open={scheduleModalOpen}
                 branch={branchForSchedule}
                 onClose={handleCloseScheduleModal}
+            />
+
+            {/* Modal de inventario */}
+            <BranchInventoryModal
+                open={inventoryModalOpen}
+                branch={branchForInventory}
+                onClose={handleCloseInventoryModal}
             />
         </Box>
     );

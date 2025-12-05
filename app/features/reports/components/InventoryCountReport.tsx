@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Box, Skeleton, Alert, FormControl, Select, MenuItem, Button } from "@mui/material";
+import { Box, Skeleton, Alert, FormControl, Select, MenuItem, Button, InputLabel } from "@mui/material";
 import {
     HiOutlineOfficeBuilding,
     HiOutlineCube,
@@ -19,28 +19,33 @@ export default function InventoryCountReport() {
     const { showError } = useToast();
     const [loading, setLoading] = useState(true);
     const [branches, setBranches] = useState<BranchResponse[]>([]);
-    const [selectedBranch, setSelectedBranch] = useState<string>("all");
+    const [selectedBranch, setSelectedBranch] = useState<string>("");
     const [inventoryCounts, setInventoryCounts] = useState<InventoryCountResponse[]>([]);
 
     const loadBranches = useCallback(async () => {
         try {
             const data = await branchService.list();
-            setBranches(data.filter(b => b.active));
+            const activeBranches = data.filter(b => b.active);
+            setBranches(activeBranches);
+            // Seleccionar la primera sucursal activa por defecto
+            if (activeBranches.length > 0 && !selectedBranch) {
+                setSelectedBranch(activeBranches[0].id);
+            }
         } catch (error) {
             console.error("Error loading branches:", error);
         }
-    }, []);
+    }, [selectedBranch]);
 
     const loadInventoryCounts = useCallback(async () => {
+        if (!selectedBranch) {
+            setLoading(false);
+            return;
+        }
         setLoading(true);
         try {
-            if (selectedBranch === "all") {
-                const data = await reportService.getAllInventoryCounts();
-                setInventoryCounts(data);
-            } else {
-                const data = await reportService.getInventoryCount(selectedBranch);
-                setInventoryCounts([data]);
-            }
+            // Obtener conteo de inventario de la sucursal seleccionada
+            const data = await reportService.getInventoryCount(selectedBranch);
+            setInventoryCounts([data]);
         } catch (error) {
             console.error("Error loading inventory counts:", error);
             showError("Error al cargar el conteo de inventario");
@@ -55,8 +60,10 @@ export default function InventoryCountReport() {
     }, [loadBranches]);
 
     useEffect(() => {
-        loadInventoryCounts();
-    }, [loadInventoryCounts]);
+        if (selectedBranch) {
+            loadInventoryCounts();
+        }
+    }, [loadInventoryCounts, selectedBranch]);
 
     const StatItem = ({ 
         icon: Icon, 
@@ -108,46 +115,53 @@ export default function InventoryCountReport() {
 
     return (
         <Box>
-            {/* Filtro y acciones */}
-            <Box sx={{ display: "flex", gap: 2, mb: 3, flexWrap: "wrap", alignItems: "center" }}>
-                <FormControl size="small" sx={{ minWidth: 250 }}>
-                    <Select
-                        value={selectedBranch}
-                        onChange={(e) => setSelectedBranch(e.target.value)}
-                        sx={{
-                            backgroundColor: "var(--color-surface)",
-                            "& .MuiOutlinedInput-notchedOutline": {
-                                borderColor: "var(--color-border)",
-                            },
-                        }}
-                    >
-                        <MenuItem value="all">Todas las sucursales</MenuItem>
-                        {branches.map((branch) => (
-                            <MenuItem key={branch.id} value={branch.id}>
-                                {branch.name}
-                            </MenuItem>
-                        ))}
-                    </Select>
-                </FormControl>
+            {branches.length === 0 && !loading ? (
+                <Alert severity="warning">
+                    No hay sucursales activas. Crea una sucursal primero para ver reportes.
+                </Alert>
+            ) : (
+                <>
+                    {/* Filtro y acciones */}
+                    <Box sx={{ display: "flex", gap: 2, mb: 3, flexWrap: "wrap", alignItems: "center" }}>
+                        <FormControl size="small" sx={{ minWidth: 250 }}>
+                            <InputLabel>Sucursal</InputLabel>
+                            <Select
+                                value={selectedBranch}
+                                label="Sucursal"
+                                onChange={(e) => setSelectedBranch(e.target.value)}
+                                sx={{
+                                    backgroundColor: "var(--color-surface)",
+                                    "& .MuiOutlinedInput-notchedOutline": {
+                                        borderColor: "var(--color-border)",
+                                    },
+                                }}
+                            >
+                                {branches.map((branch) => (
+                                    <MenuItem key={branch.id} value={branch.id}>
+                                        {branch.name}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
 
-                <Button
-                    variant="outlined"
-                    size="small"
-                    startIcon={<HiOutlineRefresh size={16} />}
-                    onClick={loadInventoryCounts}
-                    disabled={loading}
-                    sx={{
-                        borderColor: "var(--color-border)",
-                        color: "var(--color-text)",
-                        "&:hover": {
-                            borderColor: "var(--color-primary)",
-                            backgroundColor: "rgba(0, 50, 84, 0.04)",
-                        },
-                    }}
-                >
-                    Refrescar
-                </Button>
-            </Box>
+                        <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={<HiOutlineRefresh size={16} />}
+                            onClick={loadInventoryCounts}
+                            disabled={loading || !selectedBranch}
+                            sx={{
+                                borderColor: "var(--color-border)",
+                                color: "var(--color-text)",
+                                "&:hover": {
+                                    borderColor: "var(--color-primary)",
+                                    backgroundColor: "rgba(0, 50, 84, 0.04)",
+                                },
+                            }}
+                        >
+                            Refrescar
+                        </Button>
+                    </Box>
 
             {loading ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -225,6 +239,8 @@ export default function InventoryCountReport() {
                         </Card>
                     ))}
                 </div>
+            )}
+                </>
             )}
         </Box>
     );

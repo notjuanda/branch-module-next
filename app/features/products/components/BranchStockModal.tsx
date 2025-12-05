@@ -34,6 +34,7 @@ interface BranchStockModalProps {
     onClose: () => void;
     product: ProductResponse | null;
     onSuccess?: () => void;
+    branchId?: string;
 }
 
 export default function BranchStockModal({
@@ -41,6 +42,7 @@ export default function BranchStockModal({
     onClose,
     product,
     onSuccess,
+    branchId: currentBranchId,
 }: BranchStockModalProps) {
     const { showSuccess, showError } = useToast();
 
@@ -73,30 +75,27 @@ export default function BranchStockModal({
         return batchQuantity - assigned;
     };
 
-    // Sucursales ya asignadas para este producto (para excluirlas)
-    const assignedBranchIds = currentStock.map(s => s.branchId);
+    // Verificar si la sucursal actual ya tiene stock asignado de este producto
+    const currentBranchHasStock = currentStock.some(s => s.branchId === currentBranchId);
     
     // Lotes completamente asignados (disponibilidad = 0)
     const fullyAssignedBatchIds = batches
         .filter(b => getBatchAvailability(b.id, b.quantity) <= 0)
         .map(b => b.id);
-
-    // Sucursales disponibles (excluir las ya asignadas)
-    const availableBranches = branches.filter(b => !assignedBranchIds.includes(b.id));
     
     // Lotes disponibles (excluir los completamente asignados)
     const availableBatches = batches.filter(b => !fullyAssignedBatchIds.includes(b.id));
 
     const loadData = async () => {
-        if (!product) return;
+        if (!product || !currentBranchId) return;
         
         setLoadingData(true);
         try {
             // Cargar sucursales, lotes del producto y stock actual
             const [branchesData, batchesData, stockData] = await Promise.all([
                 branchService.list(),
-                batchService.listByProduct(product.id),
-                branchStockService.listByProduct(product.id),
+                batchService.listByProduct(currentBranchId, product.id),
+                branchStockService.listByProduct(currentBranchId, product.id),
             ]);
 
             setBranches(branchesData.filter(b => b.active));
@@ -119,14 +118,19 @@ export default function BranchStockModal({
 
     // Cargar datos cuando se abre el modal
     useEffect(() => {
-        if (open && product) {
+        if (open && product && currentBranchId) {
             loadData();
+            // Pre-seleccionar la sucursal actual (no editable)
+            setSelectedBranch(currentBranchId);
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [open, product]);
+    }, [open, product, currentBranchId]);
+
+    // Obtener el nombre de la sucursal actual
+    const currentBranchName = branches.find(b => b.id === currentBranchId)?.name || "Sucursal actual";
 
     const resetForm = () => {
-        setSelectedBranch("");
+        setSelectedBranch(currentBranchId || "");
         setSelectedBatch("");
         setQuantity(0);
         setMinimumStock(0);
@@ -165,7 +169,7 @@ export default function BranchStockModal({
 
         setLoading(true);
         try {
-            await branchStockService.create({
+            await branchStockService.create(selectedBranch, {
                 branchId: selectedBranch,
                 productId: product.id,
                 batchId: selectedBatch,
@@ -188,9 +192,16 @@ export default function BranchStockModal({
     };
 
     const handleDeleteStock = async (stockId: string) => {
+        // Encontrar el stock para obtener su puerto
+        const stock = currentStock.find(s => s.id === stockId);
+        if (!stock) {
+            showError("Stock no encontrado");
+            return;
+        }
+
         setDeleting(stockId);
         try {
-            await branchStockService.delete(stockId);
+            await branchStockService.delete(stock.branchId, stockId);
             showSuccess("Asignación eliminada");
             await loadData();
             onSuccess?.();
@@ -235,7 +246,7 @@ export default function BranchStockModal({
 
         setTransferring(true);
         try {
-            await branchStockService.transfer({
+            await branchStockService.transfer(stockToTransfer.branchId, stockToTransfer.id, {
                 sourceStockId: stockToTransfer.id,
                 targetBranchId: transferTargetBranch,
                 quantity: transferQuantity,
@@ -427,9 +438,9 @@ export default function BranchStockModal({
                             <Alert severity="warning">
                                 No hay lotes activos para este producto. Crea un lote primero.
                             </Alert>
-                        ) : availableBranches.length === 0 ? (
+                        ) : currentBranchHasStock ? (
                             <Alert severity="info">
-                                Este producto ya está asignado a todas las sucursales disponibles.
+                                Este producto ya tiene stock asignado en esta sucursal. Usa transferencia para mover stock.
                             </Alert>
                         ) : availableBatches.length === 0 ? (
                             <Alert severity="info">
@@ -437,7 +448,7 @@ export default function BranchStockModal({
                             </Alert>
                         ) : (
                             <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                                {/* Sucursal */}
+                                {/* Sucursal - Fija a la sucursal actual */}
                                 <FormControl fullWidth size="small">
                                     <Typography
                                         variant="caption"
@@ -447,28 +458,24 @@ export default function BranchStockModal({
                                             mb: 0.5,
                                         }}
                                     >
-                                        Sucursal *
+                                        Sucursal
                                     </Typography>
-                                    <Select
-                                        value={selectedBranch}
-                                        onChange={(e) => setSelectedBranch(e.target.value)}
-                                        displayEmpty
+                                    <TextField
+                                        value={currentBranchName}
+                                        size="small"
+                                        disabled
+                                        fullWidth
                                         sx={{
-                                            backgroundColor: "var(--color-background)",
+                                            backgroundColor: "var(--color-surface)",
                                             "& .MuiOutlinedInput-notchedOutline": {
                                                 borderColor: "var(--color-border)",
                                             },
+                                            "& .Mui-disabled": {
+                                                color: "var(--color-text)",
+                                                WebkitTextFillColor: "var(--color-text)",
+                                            },
                                         }}
-                                    >
-                                        <MenuItem value="" disabled>
-                                            Seleccionar sucursal
-                                        </MenuItem>
-                                        {availableBranches.map((branch) => (
-                                            <MenuItem key={branch.id} value={branch.id}>
-                                                {branch.name}
-                                            </MenuItem>
-                                        ))}
-                                    </Select>
+                                    />
                                 </FormControl>
 
                                 {/* Lote */}

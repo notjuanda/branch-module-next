@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Typography, Button, Skeleton, Alert, Box, Chip, Tabs, Tab } from "@mui/material";
+import { Typography, Button, Skeleton, Alert, Box, Chip, Tabs, Tab, FormControl, InputLabel, Select, MenuItem } from "@mui/material";
 import { HiOutlinePlus, HiOutlineRefresh, HiOutlineExclamation, HiOutlineBell } from "react-icons/hi";
 import { BatchTable, BatchFormModal } from "../components";
-import { BatchResponse, ExpiringBatchNotification } from "@/api/types";
-import { batchService } from "@/api/services";
+import { BatchResponse, ExpiringBatchNotification, BranchResponse } from "@/api/types";
+import { batchService, branchService } from "@/api/services";
 import { useToast } from "@/components/ui";
 
 export default function BatchesPage() {
@@ -16,11 +16,40 @@ export default function BatchesPage() {
     const [activeTab, setActiveTab] = useState(0);
     const { showError, showSuccess } = useToast();
 
+    // Lista de sucursales para el selector
+    const [branches, setBranches] = useState<BranchResponse[]>([]);
+    const [selectedBranchId, setSelectedBranchId] = useState<string>("");
+
     // Estado para modal de formulario
     const [formModalOpen, setFormModalOpen] = useState(false);
     const [batchToEdit, setBatchToEdit] = useState<BatchResponse | null>(null);
 
+    // Cargar sucursales al montar
+    useEffect(() => {
+        const loadBranches = async () => {
+            try {
+                const branchesData = await branchService.list();
+                const activeBranches = branchesData.filter(b => b.active);
+                setBranches(activeBranches);
+                
+                if (activeBranches.length > 0 && !selectedBranchId) {
+                    setSelectedBranchId(activeBranches[0].id);
+                }
+            } catch (err) {
+                console.error("Error loading branches:", err);
+                showError("Error al cargar sucursales");
+            }
+        };
+        loadBranches();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     const fetchBatches = useCallback(async () => {
+        if (!selectedBranchId) {
+            setLoading(false);
+            return;
+        }
+
         setLoading(true);
         setError(null);
         try {
@@ -28,17 +57,17 @@ export default function BatchesPage() {
 
             // Cargar según la pestaña activa
             if (activeTab === 0) {
-                data = await batchService.list();
+                data = await batchService.list(selectedBranchId);
             } else if (activeTab === 1) {
-                data = await batchService.listExpiringSoon();
+                data = await batchService.listExpiringSoon(selectedBranchId);
             } else {
-                data = await batchService.listExpired();
+                data = await batchService.listExpired(selectedBranchId);
             }
 
             setBatches(data);
 
             // Cargar notificaciones
-            const notifs = await batchService.getExpiringNotifications();
+            const notifs = await batchService.getExpiringNotifications(selectedBranchId);
             setNotifications(notifs);
         } catch (err) {
             console.error("Error al cargar lotes:", err);
@@ -47,11 +76,13 @@ export default function BatchesPage() {
         } finally {
             setLoading(false);
         }
-    }, [activeTab, showError]);
+    }, [activeTab, selectedBranchId, showError]);
 
     useEffect(() => {
-        fetchBatches();
-    }, [fetchBatches]);
+        if (selectedBranchId) {
+            fetchBatches();
+        }
+    }, [fetchBatches, selectedBranchId]);
 
     // Handlers para el modal de formulario
     const handleOpenCreate = () => {
@@ -79,8 +110,9 @@ export default function BatchesPage() {
     };
 
     const handleDeactivateExpired = async () => {
+        if (!selectedBranchId) return;
         try {
-            await batchService.deactivateExpiredBatches();
+            await batchService.deactivateExpiredBatches(selectedBranchId);
             showSuccess("Lotes vencidos desactivados");
             fetchBatches();
         } catch (err) {
@@ -88,6 +120,17 @@ export default function BatchesPage() {
             showError("Error al desactivar lotes vencidos");
         }
     };
+
+    // Si no hay sucursales activas
+    if (branches.length === 0 && !loading) {
+        return (
+            <Box sx={{ p: { xs: 2, sm: 3 } }}>
+                <Alert severity="warning">
+                    No hay sucursales activas. Crea una sucursal primero para gestionar lotes.
+                </Alert>
+            </Box>
+        );
+    }
 
     return (
         <Box sx={{ p: { xs: 2, sm: 3 } }}>
@@ -122,12 +165,28 @@ export default function BatchesPage() {
                     </Typography>
                 </div>
 
-                <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+                <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", alignItems: "center" }}>
+                    {/* Selector de sucursal */}
+                    <FormControl size="small" sx={{ minWidth: 200 }}>
+                        <InputLabel>Sucursal</InputLabel>
+                        <Select
+                            value={selectedBranchId}
+                            label="Sucursal"
+                            onChange={(e) => setSelectedBranchId(e.target.value)}
+                        >
+                            {branches.map((branch) => (
+                                <MenuItem key={branch.id} value={branch.id}>
+                                    {branch.name}
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+
                     <Button
                         variant="outlined"
                         startIcon={<HiOutlineRefresh size={18} />}
                         onClick={fetchBatches}
-                        disabled={loading}
+                        disabled={loading || !selectedBranchId}
                         size="small"
                         sx={{
                             borderColor: "var(--color-border)",
@@ -144,6 +203,7 @@ export default function BatchesPage() {
                         variant="contained"
                         startIcon={<HiOutlinePlus size={18} />}
                         onClick={handleOpenCreate}
+                        disabled={!selectedBranchId}
                         size="small"
                         sx={{
                             backgroundColor: "var(--color-success)",
@@ -281,11 +341,12 @@ export default function BatchesPage() {
             )}
 
             {/* Tabla */}
-            {!loading && !error && (
+            {!loading && !error && selectedBranchId && (
                 <BatchTable
                     batches={batches}
                     onEdit={handleOpenEdit}
                     onDelete={handleDelete}
+                    branchId={selectedBranchId}
                 />
             )}
 
@@ -295,6 +356,7 @@ export default function BatchesPage() {
                 onClose={handleCloseFormModal}
                 batch={batchToEdit}
                 onSuccess={handleFormSuccess}
+                branchId={selectedBranchId}
             />
         </Box>
     );

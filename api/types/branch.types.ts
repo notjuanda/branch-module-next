@@ -11,6 +11,7 @@ export interface BranchResponse {
     lng: number;
     active: boolean;
     coverImageUrl: string | null;
+    inventoryPort: number | null;
 }
 
 // Request - Crear

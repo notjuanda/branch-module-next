@@ -27,6 +27,7 @@ interface ProductFormModalProps {
     onClose: () => void;
     product?: ProductResponse | null;
     onSuccess?: (product: ProductResponse) => void;
+    branchId?: string;
 }
 
 // Componente de campo con icono
@@ -76,6 +77,7 @@ export default function ProductFormModal({
     onClose,
     product,
     onSuccess,
+    branchId,
 }: ProductFormModalProps) {
     const isEditing = !!product;
     const { showSuccess, showError } = useToast();
@@ -154,16 +156,20 @@ export default function ProductFormModal({
 
     const handleSubmit = async () => {
         if (!validate()) return;
+        if (!branchId) {
+            showError("Selecciona una sucursal primero");
+            return;
+        }
 
         setLoading(true);
         try {
             let result: ProductResponse;
 
             if (isEditing && product) {
-                result = await inventoryService.updateProduct(product.id, formData);
+                result = await inventoryService.updateProduct(branchId, product.id, formData);
                 showSuccess("Producto actualizado correctamente");
             } else {
-                result = await inventoryService.createProduct(formData);
+                result = await inventoryService.createProduct(branchId, formData);
                 showSuccess("Producto creado correctamente");
             }
 

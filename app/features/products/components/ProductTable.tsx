@@ -27,6 +27,7 @@ import { inventoryService } from "@/api/services";
 
 interface ProductTableProps {
     products: ProductResponse[];
+    branchId: string;
     onEdit: (product: ProductResponse) => void;
     onDelete?: (productId: string) => void;
     onAssignBranch?: (product: ProductResponse) => void;
@@ -36,6 +37,7 @@ interface ProductTableProps {
 
 export default function ProductTable({
     products,
+    branchId,
     onEdit,
     onDelete,
     onAssignBranch,
@@ -53,11 +55,11 @@ export default function ProductTable({
     };
 
     const handleConfirmDelete = async () => {
-        if (!productToDelete) return;
+        if (!productToDelete || !branchId) return;
 
         setDeleting(true);
         try {
-            await inventoryService.deleteProduct(productToDelete.id);
+            await inventoryService.deleteProduct(branchId, productToDelete.id);
             showSuccess(
                 `Producto "${productToDelete.name}" eliminado`
             );

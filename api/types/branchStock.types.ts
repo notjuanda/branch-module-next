@@ -23,6 +23,7 @@ export interface BranchStockResponse {
     id: string;
     branchId: string;
     branchName: string;
+    branchSlug?: string;  // Agregado por el agregador
     productId: string;
     productName: string;
     productBrand: string;
@@ -33,4 +34,5 @@ export interface BranchStockResponse {
     lowStock: boolean;
     createdAt: string;
     updatedAt: string;
+    containerPort?: number;  // Puerto del contenedor de inventario (agregado por el agregador)
 }

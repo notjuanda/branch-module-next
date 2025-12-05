@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Box, FormControl, Select, MenuItem, Alert, Button } from "@mui/material";
+import { Box, FormControl, Select, MenuItem, Alert, Button, InputLabel } from "@mui/material";
 import { HiOutlineCube, HiOutlineRefresh } from "react-icons/hi";
 import { StockByBranchResponse, BranchResponse } from "@/api/types";
 import { reportService, branchService } from "@/api/services";
@@ -11,28 +11,37 @@ export default function StockByBranchReport() {
     const { showError } = useToast();
     const [loading, setLoading] = useState(true);
     const [branches, setBranches] = useState<BranchResponse[]>([]);
-    const [selectedBranch, setSelectedBranch] = useState<string>("all");
+    const [selectedBranch, setSelectedBranch] = useState<string>("");
     const [stockData, setStockData] = useState<StockByBranchResponse[]>([]);
 
     const loadBranches = useCallback(async () => {
         try {
             const data = await branchService.list();
-            setBranches(data.filter(b => b.active));
+            const activeBranches = data.filter(b => b.active);
+            setBranches(activeBranches);
+            if (activeBranches.length > 0 && !selectedBranch) {
+                setSelectedBranch(activeBranches[0].id);
+            }
         } catch (error) {
             console.error("Error loading branches:", error);
         }
-    }, []);
+    }, [selectedBranch]);
 
     const loadStock = useCallback(async () => {
+        if (!selectedBranch) {
+            setLoading(false);
+            return;
+        }
         setLoading(true);
         try {
-            if (selectedBranch === "all") {
-                const data = await reportService.getAllStockByBranches();
-                setStockData(data);
-            } else {
-                const data = await reportService.getStockByBranch(selectedBranch);
-                setStockData(data);
-            }
+            const data = await reportService.getStockByBranch(selectedBranch);
+            // Enriquecer datos con el nombre de la sucursal seleccionada
+            const selectedBranchData = branches.find(b => b.id === selectedBranch);
+            const enrichedData = data.map(item => ({
+                ...item,
+                branchName: item.branchName || selectedBranchData?.name || "Sucursal",
+            }));
+            setStockData(enrichedData);
         } catch (error) {
             console.error("Error loading stock:", error);
             showError("Error al cargar el stock");
@@ -40,15 +49,17 @@ export default function StockByBranchReport() {
         } finally {
             setLoading(false);
         }
-    }, [selectedBranch, showError]);
+    }, [selectedBranch, branches, showError]);
 
     useEffect(() => {
         loadBranches();
     }, [loadBranches]);
 
     useEffect(() => {
-        loadStock();
-    }, [loadStock]);
+        if (selectedBranch) {
+            loadStock();
+        }
+    }, [loadStock, selectedBranch]);
 
     const columns: Column<StockByBranchResponse>[] = [
         {
@@ -114,13 +125,23 @@ export default function StockByBranchReport() {
         },
     ];
 
+    if (branches.length === 0 && !loading) {
+        return (
+            <Alert severity="warning">
+                No hay sucursales activas. Crea una sucursal primero para ver reportes.
+            </Alert>
+        );
+    }
+
     return (
         <Box>
             {/* Filtro y acciones */}
             <Box sx={{ display: "flex", gap: 2, mb: 3, flexWrap: "wrap", alignItems: "center" }}>
                 <FormControl size="small" sx={{ minWidth: 250 }}>
+                    <InputLabel>Sucursal</InputLabel>
                     <Select
                         value={selectedBranch}
+                        label="Sucursal"
                         onChange={(e) => setSelectedBranch(e.target.value)}
                         sx={{
                             backgroundColor: "var(--color-surface)",
@@ -129,7 +150,6 @@ export default function StockByBranchReport() {
                             },
                         }}
                     >
-                        <MenuItem value="all">Todas las sucursales</MenuItem>
                         {branches.map((branch) => (
                             <MenuItem key={branch.id} value={branch.id}>
                                 {branch.name}
@@ -143,7 +163,7 @@ export default function StockByBranchReport() {
                     size="small"
                     startIcon={<HiOutlineRefresh size={16} />}
                     onClick={loadStock}
-                    disabled={loading}
+                    disabled={loading || !selectedBranch}
                     sx={{
                         borderColor: "var(--color-border)",
                         color: "var(--color-text)",

@@ -8,6 +8,7 @@ interface ProductDeleteModalProps {
     open: boolean;
     onClose: () => void;
     product: ProductResponse | null;
+    branchId: string;
     onSuccess?: () => void;
 }
 
@@ -15,15 +16,16 @@ export default function ProductDeleteModal({
     open,
     onClose,
     product,
+    branchId,
     onSuccess,
 }: ProductDeleteModalProps) {
     const { showSuccess, showError } = useToast();
 
     const handleConfirm = async () => {
-        if (!product) return;
+        if (!product || !branchId) return;
 
         try {
-            await inventoryService.deleteProduct(product.id);
+            await inventoryService.deleteProduct(branchId, product.id);
             showSuccess("Producto eliminado correctamente");
             onSuccess?.();
         } catch (error) {

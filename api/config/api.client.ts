@@ -17,7 +17,7 @@ interface RequestConfig {
     body?: unknown;
     headers?: Record<string, string>;
     params?: Record<string, string | number | boolean | undefined>;
-    timeout?: number;
+    timeout?: number; // milliseconds; if <= 0, no client-side timeout
     skipAuth?: boolean;
 }
 
@@ -137,9 +137,10 @@ async function request<T>(
         }
     }
 
-    // Controller para timeout
+    // Controller para timeout (opcional)
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    const hasTimeout = typeof timeout === "number" && timeout > 0;
+    const timeoutId = hasTimeout ? setTimeout(() => controller.abort(), timeout) : null;
 
     try {
         const response = await fetch(url, {
@@ -149,7 +150,9 @@ async function request<T>(
             signal: controller.signal,
         });
 
-        clearTimeout(timeoutId);
+        if (timeoutId) {
+            clearTimeout(timeoutId);
+        }
 
         // Manejar 401 - Intentar refresh
         if (response.status === 401 && !skipAuth) {
@@ -252,7 +255,9 @@ async function request<T>(
 
         return response.json();
     } catch (error) {
-        clearTimeout(timeoutId);
+        if (timeoutId) {
+            clearTimeout(timeoutId);
+        }
 
         if (error instanceof ApiException) {
             throw error;

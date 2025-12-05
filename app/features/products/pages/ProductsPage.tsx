@@ -1,16 +1,18 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Typography, Button, Skeleton, Alert, Box } from "@mui/material";
+
+import { Typography, Button, Skeleton, Alert, Box, FormControl, InputLabel, Select, MenuItem } from "@mui/material";
 import { HiOutlinePlus, HiOutlineRefresh } from "react-icons/hi";
 import {
     ProductTable,
     ProductFormModal,
     BranchStockModal,
 } from "../components";
-import { ProductResponse } from "@/api/types";
-import { inventoryService, branchStockService } from "@/api/services";
+import { ProductResponse, BranchResponse } from "@/api/types";
+import { inventoryService, branchStockService, branchService } from "@/api/services";
 import { useToast } from "@/components/ui";
+import { useSearchParams } from "next/navigation";
 
 export default function ProductsPage() {
     const [products, setProducts] = useState<ProductResponse[]>([]);
@@ -18,6 +20,13 @@ export default function ProductsPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const { showError } = useToast();
+
+    const searchParams = useSearchParams();
+    const branchIdParam = searchParams.get("branchId");
+    
+    // Lista de sucursales para el selector
+    const [branches, setBranches] = useState<BranchResponse[]>([]);
+    const [selectedBranchId, setSelectedBranchId] = useState<string>(branchIdParam || "");
 
     // Estado para modal de formulario
     const [formModalOpen, setFormModalOpen] = useState(false);
@@ -27,17 +36,45 @@ export default function ProductsPage() {
     const [branchStockModalOpen, setBranchStockModalOpen] = useState(false);
     const [productForBranchStock, setProductForBranchStock] = useState<ProductResponse | null>(null);
 
+    // Cargar sucursales al montar
+    useEffect(() => {
+        const loadBranches = async () => {
+            try {
+                const branchesData = await branchService.list();
+                const activeBranches = branchesData.filter(b => b.active);
+                setBranches(activeBranches);
+                
+                // Si hay branchId en params, usarlo; sino usar la primera sucursal activa
+                if (branchIdParam) {
+                    setSelectedBranchId(branchIdParam);
+                } else if (activeBranches.length > 0 && !selectedBranchId) {
+                    setSelectedBranchId(activeBranches[0].id);
+                }
+            } catch (err) {
+                console.error("Error loading branches:", err);
+                showError("Error al cargar sucursales");
+            }
+        };
+        loadBranches();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [branchIdParam]);
+
     const fetchProducts = useCallback(async () => {
+        if (!selectedBranchId) {
+            setLoading(false);
+            return;
+        }
+
         setLoading(true);
         setError(null);
+
         try {
             const [productsData, stockData] = await Promise.all([
-                inventoryService.listProducts(),
-                branchStockService.listAll(),
+                inventoryService.listProducts(selectedBranchId),
+                branchStockService.listByBranch(selectedBranchId),
             ]);
             setProducts(productsData);
-            
-            // Construir mapa de productId -> número de sucursales únicas
+
             const countMap: Record<string, number> = {};
             stockData.forEach((stock) => {
                 if (!countMap[stock.productId]) {
@@ -53,11 +90,13 @@ export default function ProductsPage() {
         } finally {
             setLoading(false);
         }
-    }, [showError]);
+    }, [selectedBranchId, showError]);
 
     useEffect(() => {
-        fetchProducts();
-    }, [fetchProducts]);
+        if (selectedBranchId) {
+            fetchProducts();
+        }
+    }, [fetchProducts, selectedBranchId]);
 
     // Handlers para el modal de formulario
     const handleOpenCreate = () => {
@@ -95,6 +134,17 @@ export default function ProductsPage() {
         setProductForBranchStock(null);
     };
 
+    // Si no hay sucursales activas
+    if (branches.length === 0 && !loading) {
+        return (
+            <Box sx={{ p: { xs: 2, sm: 3 } }}>
+                <Alert severity="warning">
+                    No hay sucursales activas. Crea una sucursal primero para gestionar productos.
+                </Alert>
+            </Box>
+        );
+    }
+
     return (
         <Box sx={{ p: { xs: 2, sm: 3 } }}>
             {/* Header */}
@@ -124,16 +174,32 @@ export default function ProductsPage() {
                         variant="body2"
                         sx={{ color: "var(--color-text-muted)", mt: 0.5 }}
                     >
-                        Gestiona todos los productos del inventario
+                        Gestiona los productos del inventario
                     </Typography>
                 </div>
 
-                <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+                <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", alignItems: "center" }}>
+                    {/* Selector de sucursal */}
+                    <FormControl size="small" sx={{ minWidth: 200 }}>
+                        <InputLabel>Sucursal</InputLabel>
+                        <Select
+                            value={selectedBranchId}
+                            label="Sucursal"
+                            onChange={(e) => setSelectedBranchId(e.target.value)}
+                        >
+                            {branches.map((branch) => (
+                                <MenuItem key={branch.id} value={branch.id}>
+                                    {branch.name}
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+
                     <Button
                         variant="outlined"
                         startIcon={<HiOutlineRefresh size={18} />}
                         onClick={fetchProducts}
-                        disabled={loading}
+                        disabled={loading || !selectedBranchId}
                         size="small"
                         sx={{
                             borderColor: "var(--color-border)",
@@ -194,9 +260,10 @@ export default function ProductsPage() {
             )}
 
             {/* Tabla */}
-            {!loading && !error && (
+            {!loading && !error && selectedBranchId && (
                 <ProductTable
                     products={products}
+                    branchId={selectedBranchId}
                     onEdit={handleOpenEdit}
                     onDelete={handleDelete}
                     onAssignBranch={handleOpenBranchStock}
@@ -210,6 +277,7 @@ export default function ProductsPage() {
                 onClose={handleCloseFormModal}
                 product={productToEdit}
                 onSuccess={handleFormSuccess}
+                branchId={selectedBranchId}
             />
 
             {/* Modal de asignación a sucursales */}
@@ -218,6 +286,7 @@ export default function ProductsPage() {
                 onClose={handleCloseBranchStockModal}
                 product={productForBranchStock}
                 onSuccess={fetchProducts}
+                branchId={selectedBranchId}
             />
         </Box>
     );

@@ -1,4 +1,8 @@
 // ===== BRANCH STOCK SERVICE =====
+// Este servicio maneja stock de sucursales a través del proxy
+// Frontend -> nginx -> branch-module -> inventory-container
+
+import { apiClient } from "@/api/config";
 
 import type {
     BranchStockRequest,
@@ -7,128 +11,86 @@ import type {
     BranchStockResponse,
 } from "@/api/types";
 
-const INVENTORY_API_URL = process.env.NEXT_PUBLIC_API_URL_2 || "http://localhost:8081";
-
-async function branchStockRequest<T>(
-    endpoint: string,
-    options: RequestInit = {}
-): Promise<T> {
-    const url = `${INVENTORY_API_URL}${endpoint}`;
-
-    const response = await fetch(url, {
-        ...options,
-        headers: {
-            "Content-Type": "application/json",
-            ...options.headers,
-        },
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Error ${response.status}`);
-    }
-
-    // Manejar respuestas sin contenido (204 o body vacío)
-    const contentLength = response.headers.get("content-length");
-    if (response.status === 204 || contentLength === "0") {
-        return undefined as T;
-    }
-
-    // Intentar parsear JSON, si falla retornar undefined
-    const text = await response.text();
-    if (!text) {
-        return undefined as T;
-    }
-
-    return JSON.parse(text);
-}
+// Endpoints para branch-stock (requieren branchId para saber a qué contenedor ir)
+const getBranchStockEndpoints = (branchId: string) => ({
+    BRANCH_STOCK: `/api/branches/${branchId}/inventory/branch-stock`,
+    STOCK_BY_ID: (stockId: string) => `/api/branches/${branchId}/inventory/branch-stock/${stockId}`,
+    STOCK_BY_PRODUCT: (productId: string) => `/api/branches/${branchId}/inventory/branch-stock/product/${productId}`,
+    STOCK_BY_BATCH: (batchId: string) => `/api/branches/${branchId}/inventory/branch-stock/batch/${batchId}`,
+    LOW_STOCK: `/api/branches/${branchId}/inventory/branch-stock/low-stock`,
+    TRANSFER: (stockId: string) => `/api/branches/${branchId}/inventory/branch-stock/${stockId}/transfer`,
+});
 
 export const branchStockService = {
     /**
-     * Listar todo el stock (todas las asignaciones)
+     * Listar stock de una sucursal específica
      */
-    async listAll(): Promise<BranchStockResponse[]> {
-        return branchStockRequest<BranchStockResponse[]>("/api/branch-stock");
+    async listByBranch(branchId: string): Promise<BranchStockResponse[]> {
+        const endpoints = getBranchStockEndpoints(branchId);
+        return apiClient.get<BranchStockResponse[]>(endpoints.BRANCH_STOCK);
     },
 
     /**
-     * Crear asignación de stock en sucursal
+     * Listar stock por producto en una sucursal
      */
-    async create(data: BranchStockRequest): Promise<BranchStockResponse> {
-        return branchStockRequest<BranchStockResponse>("/api/branch-stock", {
-            method: "POST",
-            body: JSON.stringify(data),
-        });
+    async listByProduct(branchId: string, productId: string): Promise<BranchStockResponse[]> {
+        const endpoints = getBranchStockEndpoints(branchId);
+        return apiClient.get<BranchStockResponse[]>(endpoints.STOCK_BY_PRODUCT(productId));
+    },
+
+    /**
+     * Listar stock por lote en una sucursal
+     */
+    async listByBatch(branchId: string, batchId: string): Promise<BranchStockResponse[]> {
+        const endpoints = getBranchStockEndpoints(branchId);
+        return apiClient.get<BranchStockResponse[]>(endpoints.STOCK_BY_BATCH(batchId));
+    },
+
+    /**
+     * Listar todos los productos con stock bajo en una sucursal
+     */
+    async listLowStock(branchId: string): Promise<BranchStockResponse[]> {
+        const endpoints = getBranchStockEndpoints(branchId);
+        return apiClient.get<BranchStockResponse[]>(endpoints.LOW_STOCK);
     },
 
     /**
      * Obtener stock por ID
      */
-    async getById(stockId: string): Promise<BranchStockResponse> {
-        return branchStockRequest<BranchStockResponse>(`/api/branch-stock/${stockId}`);
+    async getById(branchId: string, stockId: string): Promise<BranchStockResponse> {
+        const endpoints = getBranchStockEndpoints(branchId);
+        return apiClient.get<BranchStockResponse>(endpoints.STOCK_BY_ID(stockId));
     },
 
     /**
-     * Listar stock por sucursal
+     * Crear asignación de stock en sucursal
      */
-    async listByBranch(branchId: string): Promise<BranchStockResponse[]> {
-        return branchStockRequest<BranchStockResponse[]>(`/api/branch-stock/branch/${branchId}`);
-    },
-
-    /**
-     * Listar stock por producto (en qué sucursales está)
-     */
-    async listByProduct(productId: string): Promise<BranchStockResponse[]> {
-        return branchStockRequest<BranchStockResponse[]>(`/api/branch-stock/product/${productId}`);
-    },
-
-    /**
-     * Listar stock por lote
-     */
-    async listByBatch(batchId: string): Promise<BranchStockResponse[]> {
-        return branchStockRequest<BranchStockResponse[]>(`/api/branch-stock/batch/${batchId}`);
-    },
-
-    /**
-     * Listar todos los productos con stock bajo
-     */
-    async listLowStock(): Promise<BranchStockResponse[]> {
-        return branchStockRequest<BranchStockResponse[]>("/api/branch-stock/low-stock");
-    },
-
-    /**
-     * Listar productos con stock bajo en una sucursal
-     */
-    async listLowStockByBranch(branchId: string): Promise<BranchStockResponse[]> {
-        return branchStockRequest<BranchStockResponse[]>(`/api/branch-stock/low-stock/branch/${branchId}`);
+    async create(branchId: string, data: BranchStockRequest): Promise<BranchStockResponse> {
+        const endpoints = getBranchStockEndpoints(branchId);
+        return apiClient.post<BranchStockResponse>(endpoints.BRANCH_STOCK, data);
     },
 
     /**
      * Actualizar stock
      */
-    async update(stockId: string, data: BranchStockUpdateRequest): Promise<BranchStockResponse> {
-        return branchStockRequest<BranchStockResponse>(`/api/branch-stock/${stockId}`, {
-            method: "PUT",
-            body: JSON.stringify(data),
-        });
+    async update(branchId: string, stockId: string, data: BranchStockUpdateRequest): Promise<BranchStockResponse> {
+        const endpoints = getBranchStockEndpoints(branchId);
+        return apiClient.put<BranchStockResponse>(endpoints.STOCK_BY_ID(stockId), data);
     },
 
     /**
      * Eliminar asignación de stock
      */
-    async delete(stockId: string): Promise<void> {
-        return branchStockRequest<void>(`/api/branch-stock/${stockId}`, {
-            method: "DELETE",
-        });
+    async delete(branchId: string, stockId: string): Promise<void> {
+        const endpoints = getBranchStockEndpoints(branchId);
+        return apiClient.delete<void>(endpoints.STOCK_BY_ID(stockId));
     },
 
     /**
      * Transferir stock entre sucursales
      */
-    async transfer(data: BranchStockTransferRequest): Promise<BranchStockResponse> {
-        return branchStockRequest<BranchStockResponse>("/api/branch-stock/transfer", {
-            method: "POST",
-            body: JSON.stringify(data),
-        });
+    async transfer(branchId: string, stockId: string, data: BranchStockTransferRequest): Promise<BranchStockResponse> {
+        const endpoints = getBranchStockEndpoints(branchId);
+        return apiClient.post<BranchStockResponse>(endpoints.TRANSFER(stockId), data);
     },
 };
