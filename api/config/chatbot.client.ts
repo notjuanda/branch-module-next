@@ -10,7 +10,8 @@ import {
 } from "./api.errors";
 
 // ===== CONFIGURACIÓN =====
-const CHATBOT_BASE_URL = process.env.NEXT_PUBLIC_API_URL_3 || "http://localhost:8082";
+// El chatbot ahora pasa por nginx en el puerto 80
+const CHATBOT_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost";
 const TIMEOUT = 60000; // 60 segundos para el chatbot (las respuestas pueden tardar)
 
 // ===== TIPOS =====
@@ -51,17 +52,17 @@ export const chatbotTokenStorage = {
 
 // ===== ENDPOINTS =====
 export const CHATBOT_ENDPOINTS = {
-    // Auth (el chatbot tiene su propio auth)
+    // Auth (el chatbot tiene su propio auth en /api/chatbot-auth)
     AUTH: {
-        LOGIN: "/api/auth/login",
-        REGISTER: "/api/auth/register",
+        LOGIN: "/api/chatbot-auth/login",
+        REGISTER: "/api/chatbot-auth/register",
     },
     // Chatbot
     CHATBOT: {
         SEND: "/api/chatbot/send",
         HISTORY: (sessionKey: string) => `/api/chatbot/history/${sessionKey}`,
         CHANGE_MODEL: "/api/chatbot/change-model",
-        SESSIONS: "/api/chatbot/sessions",
+        SESSIONS: "/api/sessions",
     },
 } as const;
 
